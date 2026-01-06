@@ -1,4 +1,4 @@
-<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -532,8 +532,7 @@
         // Import Firebase SDK (Modern Modular Syntax)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        // ADDED: getDoc to imports
-        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // --- 1. FIREBASE CONFIG ---
         const firebaseConfig = {
@@ -575,10 +574,12 @@
         // --- 3. AUTH LOGIC ---
         window.handleGoogleLogin = async () => {
             try {
-                // Modified: Just handle the popup, let onAuthStateChanged do the verification
+                // In production, check if user.email is in admin whitelist here
                 const result = await signInWithPopup(auth, provider);
                 const user = result.user;
-                console.log("Google Login Success, verifying admin status for:", user.email);
+                console.log("Admin Logged In:", user.email);
+                // For demo, we just allow entry
+                initAdminPanel(user);
             } catch (error) {
                 console.error("Login Failed:", error);
                 alert("Login Failed: " + error.message);
@@ -591,29 +592,9 @@
             });
         };
 
-        // Modified: Added Admin Email Verification Logic
-        onAuthStateChanged(auth, async (user) => {
+        onAuthStateChanged(auth, (user) => {
             if (user) {
-                try {
-                    // Check Firestore for Admin Authorization
-                    const adminDocRef = doc(db, "admins", "main_admin");
-                    const adminSnap = await getDoc(adminDocRef);
-
-                    if (adminSnap.exists() && adminSnap.data().email === user.email) {
-                        // Email matches Firestore -> Allow Access
-                        initAdminPanel(user);
-                    } else {
-                        // Email does not match -> Deny Access
-                        console.warn("Unauthorized access attempt:", user.email);
-                        alert("Access Denied: You are not authorized to view this panel.");
-                        await signOut(auth);
-                        window.location.reload();
-                    }
-                } catch (err) {
-                    console.error("Verification Error:", err);
-                    alert("System Error: Could not verify admin status.");
-                    await signOut(auth);
-                }
+                initAdminPanel(user);
             } else {
                 document.getElementById('auth-screen').classList.remove('hidden');
                 document.getElementById('admin-app').classList.add('hidden');

@@ -2394,7 +2394,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK - UPDATED TO VERSION 8.10.1 TO MATCH USER PANEL -->
+    <!-- Firebase SDK - UPDATED TO INCLUDE FIRESTORE -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -2418,7 +2418,7 @@
         // ============================================
         let firebaseApp;
         let firebaseAuth;
-        let firebaseDB;
+        let firebaseDB; // Now Firestore, not Realtime Database
         let firebaseStorage;
         
         let currentUser = null;
@@ -2458,7 +2458,7 @@
                 // Initialize Firebase
                 firebaseApp = firebase.initializeApp(firebaseConfig);
                 firebaseAuth = firebase.auth();
-                firebaseDB = firebase.firestore(); // CHANGED FROM firebase.database()
+                firebaseDB = firebase.firestore(); // INITIALIZED AS FIRESTORE
                 firebaseStorage = firebase.storage();
                 
                 console.log('Firebase initialized successfully with Firestore');
@@ -2764,7 +2764,7 @@
                 
                 console.log('Saving movie to Firestore:', movieId);
                 
-                // Save to Firestore - CHANGED FROM Realtime Database
+                // SAVE TO FIRESTORE (UPDATED)
                 await firebaseDB.collection('movies').doc(movieId).set(movieData);
                 
                 // Show success message
@@ -3023,7 +3023,7 @@
                 
                 console.log('Saving movie data to Firestore:', movieId, movieData);
                 
-                // Save movie data to Firestore - CHANGED FROM Realtime Database
+                // SAVE TO FIRESTORE (UPDATED)
                 await firebaseDB.collection('movies').doc(movieId).set(movieData);
                 
                 console.log('Movie saved to Firestore successfully');
@@ -3174,14 +3174,14 @@
             try {
                 console.log('Loading movies from Firestore...');
                 
-                // CHANGED FROM Realtime Database to Firestore
+                // LOAD FROM FIRESTORE (UPDATED)
                 const snapshot = await firebaseDB.collection('movies').get();
                 
                 if (!snapshot.empty) {
                     allMovies = [];
                     snapshot.forEach((doc) => {
                         const movie = doc.data();
-                        movie.id = doc.id; // CHANGED FROM childSnapshot.key to doc.id
+                        movie.id = doc.id; // Firestore document ID
                         allMovies.push(movie);
                     });
                     
@@ -3279,7 +3279,7 @@
             try {
                 console.log('Loading movie for edit:', movieId);
                 
-                // CHANGED FROM Realtime Database to Firestore
+                // GET FROM FIRESTORE (UPDATED)
                 const doc = await firebaseDB.collection('movies').doc(movieId).get();
                 
                 if (doc.exists) {
@@ -3326,7 +3326,7 @@
             }
             
             try {
-                // Update movie in Firestore - CHANGED FROM Realtime Database
+                // UPDATE IN FIRESTORE (UPDATED)
                 await firebaseDB.collection('movies').doc(movieId).update(movieData);
                 
                 // Show success message
@@ -3361,7 +3361,7 @@
 
         async function deleteMovie(movieId) {
             try {
-                // Delete from Firestore - CHANGED FROM Realtime Database
+                // DELETE FROM FIRESTORE (UPDATED)
                 await firebaseDB.collection('movies').doc(movieId).delete();
                 
                 // Show success message
@@ -3384,14 +3384,14 @@
         // ============================================
         async function loadReports() {
             try {
-                // CHANGED FROM Realtime Database to Firestore
+                // LOAD FROM FIRESTORE (UPDATED)
                 const snapshot = await firebaseDB.collection('reports').get();
                 
                 if (!snapshot.empty) {
                     allReports = [];
                     snapshot.forEach((doc) => {
                         const report = doc.data();
-                        report.id = doc.id; // CHANGED FROM childSnapshot.key to doc.id
+                        report.id = doc.id; // Firestore document ID
                         allReports.push(report);
                     });
                     
@@ -3468,7 +3468,7 @@
 
         async function resolveReport(reportId) {
             try {
-                // Delete report from Firestore - CHANGED FROM Realtime Database
+                // DELETE FROM FIRESTORE (UPDATED)
                 await firebaseDB.collection('reports').doc(reportId).delete();
                 
                 // Show success message
@@ -3526,14 +3526,14 @@
         // ============================================
         async function loadDashboardData() {
             try {
-                // Load movies count - CHANGED FROM Realtime Database to Firestore
+                // Load movies count - FROM FIRESTORE (UPDATED)
                 const moviesSnapshot = await firebaseDB.collection('movies').get();
-                const moviesCount = !moviesSnapshot.empty ? moviesSnapshot.size : 0; // CHANGED FROM numChildren() to size
+                const moviesCount = !moviesSnapshot.empty ? moviesSnapshot.size : 0;
                 document.getElementById('total-movies').textContent = moviesCount;
                 
-                // Load reports count - CHANGED FROM Realtime Database to Firestore
+                // Load reports count - FROM FIRESTORE (UPDATED)
                 const reportsSnapshot = await firebaseDB.collection('reports').get();
-                const reportsCount = !reportsSnapshot.empty ? reportsSnapshot.size : 0; // CHANGED FROM numChildren() to size
+                const reportsCount = !reportsSnapshot.empty ? reportsSnapshot.size : 0;
                 document.getElementById('total-reports').textContent = reportsCount;
                 document.getElementById('reports-badge').textContent = reportsCount;
                 

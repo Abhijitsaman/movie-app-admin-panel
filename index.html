@@ -2394,11 +2394,11 @@
         </div>
     </div>
 
-    <!-- Firebase SDK - UPDATED TO INCLUDE FIRESTORE -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
 
     <script>
         // ============================================
@@ -2418,7 +2418,7 @@
         // ============================================
         let firebaseApp;
         let firebaseAuth;
-        let firebaseDB; // Now Firestore, not Realtime Database
+        let firebaseDB;
         let firebaseStorage;
         
         let currentUser = null;
@@ -2458,10 +2458,10 @@
                 // Initialize Firebase
                 firebaseApp = firebase.initializeApp(firebaseConfig);
                 firebaseAuth = firebase.auth();
-                firebaseDB = firebase.firestore(); // INITIALIZED AS FIRESTORE
+                firebaseDB = firebase.database();
                 firebaseStorage = firebase.storage();
                 
-                console.log('Firebase initialized successfully with Firestore');
+                console.log('Firebase initialized successfully');
                 
                 // Check authentication state
                 firebaseAuth.onAuthStateChanged((user) => {
@@ -2762,13 +2762,11 @@
                 movieData.createdAt = Date.now();
                 movieData.updatedAt = Date.now();
                 
-                console.log('Saving movie to Firestore:', movieId);
-                
-                // SAVE TO FIRESTORE (UPDATED)
-                await firebaseDB.collection('movies').doc(movieId).set(movieData);
+                // Save to Firebase
+                await firebaseDB.ref(`movies/${movieId}`).set(movieData);
                 
                 // Show success message
-                showAlert('Movie added successfully to Firestore!', 'success');
+                showAlert('Movie added successfully!', 'success');
                 showToast('Movie has been added to the library', 'success');
                 
                 // Reset form
@@ -2780,7 +2778,7 @@
                 }, 1500);
                 
             } catch (error) {
-                console.error('Error adding movie to Firestore:', error);
+                console.error('Error adding movie:', error);
                 showAlert(`Failed to add movie: ${error.message}`, 'danger');
             } finally {
                 submitBtn.disabled = false;
@@ -2995,11 +2993,8 @@
             document.getElementById('upload-message').textContent = 'Starting upload...';
             
             try {
-                console.log('Starting file upload process...');
-                
                 // Upload files to Firebase Storage
                 const uploadResults = await uploadFilesToStorage();
-                console.log('Files uploaded to storage:', uploadResults);
                 
                 // Update movie data with uploaded file URLs
                 uploadResults.forEach(result => {
@@ -3021,15 +3016,11 @@
                 movieData.createdAt = Date.now();
                 movieData.updatedAt = Date.now();
                 
-                console.log('Saving movie data to Firestore:', movieId, movieData);
-                
-                // SAVE TO FIRESTORE (UPDATED)
-                await firebaseDB.collection('movies').doc(movieId).set(movieData);
-                
-                console.log('Movie saved to Firestore successfully');
+                // Save movie data to Firebase Database
+                await firebaseDB.ref(`movies/${movieId}`).set(movieData);
                 
                 // Show success message
-                showAlert('Movie uploaded successfully to Firestore!', 'success');
+                showAlert('Movie uploaded successfully!', 'success');
                 showToast('Movie has been uploaded and added to the library', 'success');
                 
                 // Reset form
@@ -3057,12 +3048,8 @@
             const totalFiles = uploadQueue.length;
             let uploadedFiles = 0;
             
-            console.log(`Uploading ${totalFiles} files to Firebase Storage`);
-            
             for (const item of uploadQueue) {
                 try {
-                    console.log(`Starting upload of ${item.type}: ${item.file.name}`);
-                    
                     // Update item status
                     item.status = 'uploading';
                     updateUploadQueueDisplay();
@@ -3082,9 +3069,6 @@
                             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                             item.progress = progress;
                             
-                            // Log progress for debugging
-                            console.log(`${item.type} upload progress: ${Math.round(progress)}%`);
-                            
                             // Update overall progress
                             uploadedFiles++;
                             const overallProgress = (uploadedFiles / totalFiles) * 100;
@@ -3092,51 +3076,31 @@
                             document.getElementById('upload-percentage').textContent = `${Math.round(overallProgress)}%`;
                             
                             updateUploadQueueDisplay();
-                            
-                            // Debug log for 25% issue
-                            if (Math.round(progress) === 25) {
-                                console.log('DEBUG: Reached 25% upload progress for', item.type);
-                                console.log('Bytes transferred:', snapshot.bytesTransferred, 'Total bytes:', snapshot.totalBytes);
-                            }
                         },
                         (error) => {
                             console.error('Upload error:', error);
-                            console.error('Error code:', error.code);
-                            console.error('Error message:', error.message);
                             item.status = 'failed';
                             updateUploadQueueDisplay();
                             throw error;
-                        },
-                        async () => {
-                            // Upload completed successfully
-                            try {
-                                console.log(`${item.type} upload completed, getting download URL...`);
-                                
-                                // Get download URL
-                                const downloadURL = await storageRef.getDownloadURL();
-                                console.log(`${item.type} download URL obtained:`, downloadURL);
-                                
-                                // Update item
-                                item.status = 'completed';
-                                item.url = downloadURL;
-                                results.push({
-                                    type: item.type,
-                                    url: downloadURL,
-                                    fileName: fileName
-                                });
-                                
-                                updateUploadQueueDisplay();
-                                console.log(`${item.type} added to results`);
-                                
-                            } catch (urlError) {
-                                console.error(`Error getting download URL for ${item.type}:`, urlError);
-                                throw urlError;
-                            }
                         }
                     );
                     
                     // Wait for upload to complete
                     await uploadTask;
+                    
+                    // Get download URL
+                    const downloadURL = await storageRef.getDownloadURL();
+                    
+                    // Update item
+                    item.status = 'completed';
+                    item.url = downloadURL;
+                    results.push({
+                        type: item.type,
+                        url: downloadURL,
+                        fileName: fileName
+                    });
+                    
+                    updateUploadQueueDisplay();
                     
                 } catch (error) {
                     console.error(`Error uploading ${item.type}:`, error);
@@ -3146,7 +3110,6 @@
                 }
             }
             
-            console.log('All files uploaded successfully:', results);
             return results;
         }
 
@@ -3168,27 +3131,23 @@
         }
 
         // ============================================
-        // MOVIE MANAGEMENT FUNCTIONS - UPDATED FOR FIRESTORE
+        // MOVIE MANAGEMENT FUNCTIONS
         // ============================================
         async function loadMovies() {
             try {
-                console.log('Loading movies from Firestore...');
+                const moviesRef = firebaseDB.ref('movies');
+                const snapshot = await moviesRef.once('value');
                 
-                // LOAD FROM FIRESTORE (UPDATED)
-                const snapshot = await firebaseDB.collection('movies').get();
-                
-                if (!snapshot.empty) {
+                if (snapshot.exists()) {
                     allMovies = [];
-                    snapshot.forEach((doc) => {
-                        const movie = doc.data();
-                        movie.id = doc.id; // Firestore document ID
+                    snapshot.forEach((childSnapshot) => {
+                        const movie = childSnapshot.val();
+                        movie.id = childSnapshot.key;
                         allMovies.push(movie);
                     });
                     
-                    console.log(`Loaded ${allMovies.length} movies from Firestore`);
                     displayMovies(allMovies);
                 } else {
-                    console.log('No movies found in Firestore');
                     showEmptyMoviesState();
                 }
                 
@@ -3196,7 +3155,7 @@
                 updateDashboardStats();
                 
             } catch (error) {
-                console.error('Error loading movies from Firestore:', error);
+                console.error('Error loading movies:', error);
                 showToast('Failed to load movies', 'danger');
             }
         }
@@ -3277,13 +3236,11 @@
 
         async function editMovie(movieId) {
             try {
-                console.log('Loading movie for edit:', movieId);
+                const movieRef = firebaseDB.ref(`movies/${movieId}`);
+                const snapshot = await movieRef.once('value');
                 
-                // GET FROM FIRESTORE (UPDATED)
-                const doc = await firebaseDB.collection('movies').doc(movieId).get();
-                
-                if (doc.exists) {
-                    const movie = doc.data();
+                if (snapshot.exists()) {
+                    const movie = snapshot.val();
                     
                     // Populate edit form
                     document.getElementById('edit-movie-id').value = movieId;
@@ -3295,11 +3252,9 @@
                     
                     // Show edit modal
                     document.getElementById('edit-modal').classList.add('active');
-                } else {
-                    showToast('Movie not found in Firestore', 'warning');
                 }
             } catch (error) {
-                console.error('Error loading movie from Firestore for edit:', error);
+                console.error('Error loading movie for edit:', error);
                 showToast('Failed to load movie details', 'danger');
             }
         }
@@ -3326,11 +3281,11 @@
             }
             
             try {
-                // UPDATE IN FIRESTORE (UPDATED)
-                await firebaseDB.collection('movies').doc(movieId).update(movieData);
+                // Update movie in Firebase
+                await firebaseDB.ref(`movies/${movieId}`).update(movieData);
                 
                 // Show success message
-                showToast('Movie updated successfully in Firestore!', 'success');
+                showToast('Movie updated successfully!', 'success');
                 
                 // Close modal
                 closeEditModal();
@@ -3339,7 +3294,7 @@
                 loadMovies();
                 
             } catch (error) {
-                console.error('Error updating movie in Firestore:', error);
+                console.error('Error updating movie:', error);
                 showToast('Failed to update movie', 'danger');
             }
         }
@@ -3361,11 +3316,11 @@
 
         async function deleteMovie(movieId) {
             try {
-                // DELETE FROM FIRESTORE (UPDATED)
-                await firebaseDB.collection('movies').doc(movieId).delete();
+                // Delete from Firebase
+                await firebaseDB.ref(`movies/${movieId}`).remove();
                 
                 // Show success message
-                showToast('Movie deleted successfully from Firestore', 'success');
+                showToast('Movie deleted successfully', 'success');
                 
                 // Refresh movies list
                 loadMovies();
@@ -3374,24 +3329,24 @@
                 updateDashboardStats();
                 
             } catch (error) {
-                console.error('Error deleting movie from Firestore:', error);
+                console.error('Error deleting movie:', error);
                 showToast('Failed to delete movie', 'danger');
             }
         }
 
         // ============================================
-        // REPORTS MANAGEMENT FUNCTIONS - UPDATED FOR FIRESTORE
+        // REPORTS MANAGEMENT FUNCTIONS
         // ============================================
         async function loadReports() {
             try {
-                // LOAD FROM FIRESTORE (UPDATED)
-                const snapshot = await firebaseDB.collection('reports').get();
+                const reportsRef = firebaseDB.ref('reports');
+                const snapshot = await reportsRef.once('value');
                 
-                if (!snapshot.empty) {
+                if (snapshot.exists()) {
                     allReports = [];
-                    snapshot.forEach((doc) => {
-                        const report = doc.data();
-                        report.id = doc.id; // Firestore document ID
+                    snapshot.forEach((childSnapshot) => {
+                        const report = childSnapshot.val();
+                        report.id = childSnapshot.key;
                         allReports.push(report);
                     });
                     
@@ -3404,7 +3359,7 @@
                 updateReportsBadge();
                 
             } catch (error) {
-                console.error('Error loading reports from Firestore:', error);
+                console.error('Error loading reports:', error);
                 showToast('Failed to load reports', 'danger');
             }
         }
@@ -3468,11 +3423,11 @@
 
         async function resolveReport(reportId) {
             try {
-                // DELETE FROM FIRESTORE (UPDATED)
-                await firebaseDB.collection('reports').doc(reportId).delete();
+                // Delete report from Firebase
+                await firebaseDB.ref(`reports/${reportId}`).remove();
                 
                 // Show success message
-                showToast('Report resolved successfully from Firestore', 'success');
+                showToast('Report resolved successfully', 'success');
                 
                 // Refresh reports list
                 loadReports();
@@ -3481,7 +3436,7 @@
                 updateDashboardStats();
                 
             } catch (error) {
-                console.error('Error resolving report in Firestore:', error);
+                console.error('Error resolving report:', error);
                 showToast('Failed to resolve report', 'danger');
             }
         }
@@ -3522,31 +3477,31 @@
         }
 
         // ============================================
-        // DASHBOARD FUNCTIONS - UPDATED FOR FIRESTORE
+        // DASHBOARD FUNCTIONS
         // ============================================
         async function loadDashboardData() {
             try {
-                // Load movies count - FROM FIRESTORE (UPDATED)
-                const moviesSnapshot = await firebaseDB.collection('movies').get();
-                const moviesCount = !moviesSnapshot.empty ? moviesSnapshot.size : 0;
+                // Load movies count
+                const moviesSnapshot = await firebaseDB.ref('movies').once('value');
+                const moviesCount = moviesSnapshot.exists() ? moviesSnapshot.numChildren() : 0;
                 document.getElementById('total-movies').textContent = moviesCount;
                 
-                // Load reports count - FROM FIRESTORE (UPDATED)
-                const reportsSnapshot = await firebaseDB.collection('reports').get();
-                const reportsCount = !reportsSnapshot.empty ? reportsSnapshot.size : 0;
+                // Load reports count
+                const reportsSnapshot = await firebaseDB.ref('reports').once('value');
+                const reportsCount = reportsSnapshot.exists() ? reportsSnapshot.numChildren() : 0;
                 document.getElementById('total-reports').textContent = reportsCount;
                 document.getElementById('reports-badge').textContent = reportsCount;
                 
                 // Load users count (if users collection exists)
-                // Note: This requires a users collection in your Firestore
+                // Note: This requires a users collection in your Firebase
                 // For now, we'll use a placeholder
                 document.getElementById('total-users').textContent = '0';
                 
                 // Calculate total views
                 let totalViews = 0;
-                if (!moviesSnapshot.empty) {
-                    moviesSnapshot.forEach((doc) => {
-                        const movie = doc.data();
+                if (moviesSnapshot.exists()) {
+                    moviesSnapshot.forEach((childSnapshot) => {
+                        const movie = childSnapshot.val();
                         totalViews += (movie.views || 0);
                     });
                 }
@@ -3556,7 +3511,7 @@
                 loadRecentActivity();
                 
             } catch (error) {
-                console.error('Error loading dashboard data from Firestore:', error);
+                console.error('Error loading dashboard data:', error);
             }
         }
 
